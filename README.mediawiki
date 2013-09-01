@@ -1,4 +1,12 @@
-xweb-wiki
-=========
+=XWeb wiki=
+XWeb wiki module. You can easily load and coverts wiki data from the server side.
 
-XWeb wiki module
+== Setup wiki module ==
+You need to create a directory called 'wiki' in resource directory if data folder, then copy all the wiki files to this directory as text file. 
+for example sample_test.txt
+
+You can load wiki HTML file like this:
+  /api?api=wiki&html=sample_test
+  
+== Features ==
+All the Wiki that cach on the hard driver and it will update automaticlly when you change the wiki text file
