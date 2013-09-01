@@ -6,7 +6,9 @@ You need to create a directory called 'wiki' in resource directory if data folde
 for example sample_test.txt
 
 You can load wiki HTML file like this:
-  /api?api=wiki&html=sample_test
-  
+<pre>
+/api?api=wiki&html=sample_test
+</pre>
+
 == Features ==
 All the Wiki that cach on the hard driver and it will update automaticlly when you change the wiki text file
