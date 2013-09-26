@@ -1,3 +1,7 @@
+# XWeb wiki
+XWeb wiki module. It's support mediawiki format now.
+
+
 =XWeb wiki=
 XWeb wiki module. You can easily load and coverts wiki data from the server side.
 

@@ -1,6 +1,7 @@
 package ir.xweb.module;
 
 import info.bliki.wiki.model.WikiModel;
+import ir.xweb.server.Constants;
 import ir.xweb.util.Tools;
 import org.apache.commons.fileupload.FileItem;
 
@@ -9,71 +10,128 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class WikiModule extends Module {
 
-    private final static String DEFAULT_WIKI_DIR   = "wiki";
+    private final static String WIKI_DIR   = "dir.wiki";
+
+    private final static String WIKI_CHACHE_DIR   = "dir.cache";
 
     private final static String FILE_NAME_STRIPPER_REGEX = "^[.\\\\/:*?\"<>|]?[\\\\/:*?\"<>|]*";
 
-    public WikiModule(Manager manager, ModuleInfo info, ModuleParam properties) {
+    private final static List<String> VALID_IMAGE_EXT = Arrays.asList(".png", ".jpg", ".gif", ".svg");
+
+    private final File wikiDir;
+
+    private final File cacheDir;
+
+    public WikiModule(
+            final Manager manager,
+            final ModuleInfo info,
+            final ModuleParam properties) {
         super(manager, info, properties);
+
+        String wikiPath = properties.getString(WIKI_DIR, null);
+        if(wikiPath == null) {
+            throw new IllegalArgumentException(WIKI_DIR + " property not found!");
+        }
+
+        wikiDir = new File(wikiPath);
+        if(!wikiDir.exists() || !wikiDir.mkdirs()) {
+            throw new IllegalArgumentException("Can not create wiki dir: " + wikiDir);
+        }
+        if(wikiDir.canRead()) {
+            throw new IllegalArgumentException("Can not read wiki dir: " + wikiDir);
+        }
+
+        String cachePath = properties.getString(WIKI_CHACHE_DIR, wikiPath);
+        cacheDir = new File(cachePath);
+        if(!cacheDir.exists() || !cacheDir.mkdirs()) {
+            throw new IllegalArgumentException("Can not create cache dir: " + cacheDir);
+        }
+        if(cacheDir.canRead()) {
+            throw new IllegalArgumentException("Can not read cache dir: " + cacheDir);
+        }
     }
 
     @Override
-    public void process(ServletContext context, HttpServletRequest request,
-                        HttpServletResponse response, ModuleParam params,
-                        HashMap<String, FileItem> files) throws IOException {
+    public void process(
+            final ServletContext context,
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final ModuleParam params,
+            final HashMap<String, FileItem> files) throws IOException {
 
-        ResourceModule rm = getManager().getModule(ResourceModule.class);
+        final ResourceModule resourceModule = getManager().getModuleOrThrow(ResourceModule.class);
 
-        if(params.containsKey("image")) {
-            String path = params.getString("image", null);
-            File imageFile = rm.getFile(DEFAULT_WIKI_DIR + File.separator + path);
-            rm.writeFile(response, imageFile);
-        } else if(params.containsKey("html")) {
-            String path = params.getString("html", null);
+        if(params.containsKey("get")) {
+            final String path = params.getString("html", null).replaceAll("[\\s]", "_");
 
-            path = path.replaceAll("[\\s]", "_");
-
-            File wikiFile = rm.getFile(DEFAULT_WIKI_DIR + File.separator + path + ".txt");
-
-            if(wikiFile != null) {
-                File file;
-
-                response.setContentType("text/html");
-                response.setCharacterEncoding("utf-8");
-
-                String acceptEncoding = request.getHeader("Accept-Encoding");
-                if(acceptEncoding != null && acceptEncoding.toLowerCase().indexOf("gzip") > -1) {
-                    response.setHeader("Content-Encoding", "gzip");
-
-                    file = new File(wikiFile.getPath() + ".html.gz");
-                } else {
-                    file = new File(wikiFile.getPath() + ".html");
-                }
-
-                // update file
-                if(!file.exists() || file.lastModified() < wikiFile.lastModified()) {
-                    convertToWiki(wikiFile, file, request.getContextPath());
-                }
-
-                rm.writeFile(response, file);
+            if(isImage(path)) {
+                resourceModule.writeFile(response, new File(wikiDir, path));
             } else {
-                throw new IllegalArgumentException("File not found: " + path);
+                boolean zipSupport = false;
+                final String acceptEncoding = request.getHeader("Accept-Encoding");
+                if(acceptEncoding != null && acceptEncoding.toLowerCase().indexOf("gzip") > -1) {
+                    zipSupport = true;
+                }
+
+                final File cacheFile = new File(cacheDir, path + (zipSupport ? ".html.gz" : ".html"));
+                if(!cacheFile.exists()) {
+                    File wikiFile = null;
+
+                    final File mediaWiki = new File(wikiDir, path + ".mediawiki");
+                    if(mediaWiki.exists()) {
+                        wikiFile = mediaWiki;
+
+                        mediaWikiConvert(context, wikiFile, cacheFile);
+                    }
+
+                    // generate zip
+                    if(wikiFile != null) {
+                        Tools.zipFile(wikiFile, new File(wikiFile.getPath() + ".gz"));
+                    } else {
+                        throw new ModuleException(HttpServletResponse.SC_NO_CONTENT, path + " not found");
+                    }
+                }
+
+                if(zipSupport) {
+                    response.addHeader("Content-Encoding", "gzip");
+                }
+                resourceModule.writeFile(response, cacheFile);
+            }
+        } else if(params.containsKey("put") || files != null && files.size() > 0) {
+            if(files != null && files.size() > 0) {
+                for (Map.Entry<String, FileItem> f:files.entrySet()) {
+
+                }
+            }
+
+            final String put = params.getString("put", null);
+            if(put != null) {
+                String title = params.getString("title", null);
+                String format = params.getString("format", "mediawiki");
+
+                if(title == null || !Tools.isValidFilename(title)) {
+                    throw new ModuleException("title is not valid: " + title);
+                }
+
+                if("mediawiki".equals(format)) {
+
+                } else {
+                    throw new ModuleException("Illegal format");
+                }
             }
         } else if(params.containsKey("clear_cache")) {
-            File wikiDir = rm.getFile(DEFAULT_WIKI_DIR);
-
-            List<File> htmls = list(wikiDir, ".html");
-            //System.out.println(htmls.size());
-
-            if(htmls != null) {
-                for(File html:htmls) {
-                    html.delete();
+            File[] _files = cacheDir.listFiles();
+            if(_files != null) {
+                for(File f:_files) {
+                    Files.deleteIfExists(f.toPath());
                 }
             }
         } else {
@@ -82,44 +140,27 @@ public class WikiModule extends Module {
 
     }
 
-    private List<File> list(File file, String ext) {
-        ArrayList<File> files = new ArrayList<File>();
-        _list(file, files, ext);
-        return files;
-    }
-
-    private void _list(File file, ArrayList<File> files, String ext) {
-        File[] _files = file.listFiles();
-        if(files != null) {
-            for(File f:_files) {
-                if(f.isDirectory()) {
-                    _list(f, files, ext);
-                } else if(f.getName().endsWith(ext)) {
-                    files.add(f);
-                }
+    private boolean isImage(final String path) {
+        for(String ext:VALID_IMAGE_EXT) {
+            if(path.endsWith(ext)) {
+                return true;
             }
         }
+        return false;
     }
 
-    private void convertToWiki(File wikiFile, File file, String path) throws IOException {
-        File htmlFile, zipFile;
-        if(file.getPath().endsWith(".gz")) {
-            htmlFile = new File(file.getPath().substring(0, file.getPath().length() - 3));
-            zipFile = file;
-        } else {
-            htmlFile = file;
-            zipFile = new File(file.getPath() + ".gz");
-        }
+    private void mediaWikiConvert(final ServletContext context, final File src, final File dst) throws IOException {
+        final String wiki = Tools.readTextFile(src);
 
+        // generate image address
+        final String imagePath = context.getContextPath() + "/" +
+                Constants.MODULE_URI_PERFIX + "?" +
+                Constants.MODULE_NAME_PARAMETER + "=" + getInfo().getName() + "&get=";
 
-        String wiki = Tools.readTextFile(wikiFile);
+        final WikiModel model = new WikiModel(imagePath + "${image}", "${title}");
 
-        String language = htmlFile.getParentFile().getName();
-        WikiModel model = new WikiModel(path + "/wiki-image/" + language + "/${image}", "${title}");
-
-        String html = model.render(wiki, false);
-        Tools.writeTextFile(html, htmlFile);
-        Tools.gzipFile(htmlFile, zipFile);
+        final String html = model.render(wiki, false);
+        Tools.writeTextFile(html, dst);
     }
 
 }
