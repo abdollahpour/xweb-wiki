@@ -1,5 +1,28 @@
 # XWeb wiki
-XWeb wiki module. It's support mediawiki format now.
+XWeb wiki module. It support mediawiki format now.
+
+## How to use it?
+Simple put module definition in xweb.xml
+
+```xml
+<module>
+	<name>wiki</name>
+	<author>Hamed Abdollahpour</author>
+	<class>ir.xweb.module.WikiModule</class>
+	<validators>
+		<!-- TODO: restrict illegal value to cheat system -->
+		<validator param="edit" regex=".*?" />
+		<validator param="html" regex=".*?" />
+		<validator param="image" regex=".*?" />
+	</validators>
+	<roles>
+    <!-- Administrator can do anything - If you have different role for administration change this item -->
+		<role definite="true" param="" eval="true" value="admin" />
+		<!-- Everyone can get informations -->
+		<role param="get" eval="true" value=".*?" />
+	</roles>
+</module>
+```
 
 
 =XWeb wiki=
