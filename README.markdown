@@ -68,8 +68,10 @@ You can also put image and wiki files (now just mediawiki)
 ```
 
 ### Put data with post
+```html
 <form action='/api?api=wiki'>
 	<input type='text' name='title' />
 	<textarea name='put'></textarea>
 	<input type='submit' value='send it now' />
 </form>
+```
