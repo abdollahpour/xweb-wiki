@@ -162,13 +162,27 @@ public class WikiModule extends Module {
         final String wiki = Tools.readTextFile(src);
 
         // generate image address
-        final String imagePath = context.getContextPath() + "/" +
+        final String apiPath = (context.getContextPath() != null ? context.getContextPath() : "") +
                 Constants.MODULE_URI_PERFIX + "?" +
                 Constants.MODULE_NAME_PARAMETER + "=" + getInfo().getName() + "&get=";
 
-        final WikiModel model = new WikiModel(imagePath + "${image}", "${title}");
+        final WikiModel model = new WikiModel(apiPath + "${image}", "${title}");
 
-        final String html = model.render(wiki, false);
+        String html = model.render(wiki, false);
+
+        // there's some problem with WikiModel, if you just put [[File:example.jpg|caption]]
+        // you will get
+        // <a ... href="File:example.jpg" ...>
+        // that is actually no where! so we fix it by this regex
+
+        html = html.replaceAll("href=\"File:", "href=\"" + apiPath);
+
+        // another solution remove attr,
+        // htmlFragment.replaceAll("\\s+(?:" + attributesToRemove + ")\\s*=\\s*\"[^\"]*\"","");
+        // code:
+        // String attributesToRemove = "id\\=\\\"3nav";
+        // html = html.replaceAll("\\s+(?:" + attributesToRemove + ")[^\"]*\"","");
+
         Tools.writeTextFile(html, dst);
     }
 
