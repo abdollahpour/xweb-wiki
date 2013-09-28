@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xweb version='1.0'>
+
+	<properties>
+		<property key='default.user'>admin@pdroid.org</property>
+		<property key='default.dir.store'>/media/LINK/projects/PDroid/pdroid-server/data</property>
+	</properties>
+
+	<modules>
+
+		<module>
+			<name>resource</name>
+			<author>Hamed Abdollahpour</author>
+			<class>ir.xweb.module.ResourceModule</class>
+			<properties>
+				<property key='dir.data'>target</property>
+			</properties>
+		</module>
+
+		<module>
+			<name>wiki</name>
+			<author>Hamed Abdollahpour</author>
+			<class>ir.xweb.module.WikiModule</class>
+			<properties>
+				<property key='dir.wiki'>src/test/resources</property>
+				<property key='dir.cache'>target</property>
+			</properties>
+		</module>
+
+	</modules>
+
+</xweb>

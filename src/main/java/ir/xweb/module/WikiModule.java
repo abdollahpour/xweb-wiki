@@ -1,3 +1,9 @@
+/**
+ * XWeb project
+ * https://github.com/abdollahpour/xweb
+ * Hamed Abdollahpour - 2013
+ */
+
 package ir.xweb.module;
 
 import info.bliki.wiki.model.WikiModel;
@@ -14,7 +20,6 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class WikiModule extends Module {
 
@@ -42,19 +47,20 @@ public class WikiModule extends Module {
         }
 
         wikiDir = new File(wikiPath);
-        if(!wikiDir.exists() || !wikiDir.mkdirs()) {
+        System.out.println(wikiDir.getAbsolutePath());
+        if(!wikiDir.exists() && !wikiDir.mkdirs()) {
             throw new IllegalArgumentException("Can not create wiki dir: " + wikiDir);
         }
-        if(wikiDir.canRead()) {
+        if(!wikiDir.canRead()) {
             throw new IllegalArgumentException("Can not read wiki dir: " + wikiDir);
         }
 
         String cachePath = properties.getString(WIKI_CHACHE_DIR, wikiPath);
         cacheDir = new File(cachePath);
-        if(!cacheDir.exists() || !cacheDir.mkdirs()) {
+        if(!cacheDir.exists() && !cacheDir.mkdirs()) {
             throw new IllegalArgumentException("Can not create cache dir: " + cacheDir);
         }
-        if(cacheDir.canRead()) {
+        if(!cacheDir.canWrite()) {
             throw new IllegalArgumentException("Can not read cache dir: " + cacheDir);
         }
     }
@@ -69,8 +75,8 @@ public class WikiModule extends Module {
 
         final ResourceModule resourceModule = getManager().getModuleOrThrow(ResourceModule.class);
 
-        if(params.containsKey("get")) {
-            final String path = params.getString("html", null).replaceAll("[\\s]", "_");
+        if(params.containsKey("get") || params.containsKey("html") /* deprecated */) {
+            final String path = params.getString("get", params.getString("html", null)).replaceAll("[\\s]", "_");
 
             if(isImage(path)) {
                 resourceModule.writeFile(response, new File(wikiDir, path));
@@ -94,7 +100,7 @@ public class WikiModule extends Module {
 
                     // generate zip
                     if(wikiFile != null) {
-                        Tools.zipFile(wikiFile, new File(wikiFile.getPath() + ".gz"));
+                        Tools.zipFile(cacheFile, new File(cacheFile.getPath() + ".gz"));
                     } else {
                         throw new ModuleException(HttpServletResponse.SC_NO_CONTENT, path + " not found");
                     }
@@ -106,7 +112,8 @@ public class WikiModule extends Module {
                 resourceModule.writeFile(response, cacheFile);
             }
         } else if(params.containsKey("put") || files != null && files.size() > 0) {
-            if(files != null && files.size() > 0) {
+            // TODO: Edit mode does not support yet
+            /*if(files != null && files.size() > 0) {
                 for (Map.Entry<String, FileItem> f:files.entrySet()) {
 
                 }
@@ -126,7 +133,7 @@ public class WikiModule extends Module {
                 } else {
                     throw new ModuleException("Illegal format");
                 }
-            }
+            }*/
         } else if(params.containsKey("clear_cache")) {
             File[] _files = cacheDir.listFiles();
             if(_files != null) {
