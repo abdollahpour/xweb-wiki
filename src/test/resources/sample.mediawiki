@@ -1,1 +1,2 @@
 #sample header
+[[File:example.jpg|caption]]

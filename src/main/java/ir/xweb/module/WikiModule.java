@@ -88,21 +88,23 @@ public class WikiModule extends Module {
                 }
 
                 final File cacheFile = new File(cacheDir, path + (zipSupport ? ".html.gz" : ".html"));
-                if(!cacheFile.exists()) {
-                    File wikiFile = null;
+                final File mediaWiki = new File(wikiDir, path + ".mediawiki");
 
-                    final File mediaWiki = new File(wikiDir, path + ".mediawiki");
-                    if(mediaWiki.exists()) {
-                        wikiFile = mediaWiki;
+                File wikiFile = null;
+                if(mediaWiki.exists()) {
+                    wikiFile = mediaWiki;
+                } else {
+                    throw new ModuleException(HttpServletResponse.SC_NO_CONTENT, path + " not found");
+                }
 
+
+                if(!cacheFile.exists() || wikiFile.lastModified() > cacheFile.lastModified()) {
+                    if(wikiFile != null) {
                         mediaWikiConvert(context, wikiFile, cacheFile);
                     }
-
                     // generate zip
                     if(wikiFile != null) {
                         Tools.zipFile(cacheFile, new File(cacheFile.getPath() + ".gz"));
-                    } else {
-                        throw new ModuleException(HttpServletResponse.SC_NO_CONTENT, path + " not found");
                     }
                 }
 
