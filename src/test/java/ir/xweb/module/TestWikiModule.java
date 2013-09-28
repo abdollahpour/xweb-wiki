@@ -7,6 +7,8 @@
 package ir.xweb.module;
 
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletOutputStream;
@@ -53,6 +55,8 @@ public class TestWikiModule {
         params.put("get", "sample");
 
         wikiModule.process(this.servletContext, request, response, new ModuleParam(params), null);
+
+        verify(response).addHeader("Content-type", "text/html");
     }
 
     @Test

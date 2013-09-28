@@ -87,7 +87,7 @@ public class WikiModule extends Module {
                     zipSupport = true;
                 }
 
-                final File cacheFile = new File(cacheDir, path + (zipSupport ? ".html.gz" : ".html"));
+                final File cacheFile = new File(cacheDir, path + ".html");
                 final File mediaWiki = new File(wikiDir, path + ".mediawiki");
 
                 File wikiFile = null;
@@ -99,7 +99,7 @@ public class WikiModule extends Module {
 
 
                 if(!cacheFile.exists() || wikiFile.lastModified() > cacheFile.lastModified()) {
-                    if(wikiFile != null) {
+                    if(mediaWiki != null) {
                         mediaWikiConvert(context, wikiFile, cacheFile);
                     }
                     // generate zip
@@ -108,10 +108,13 @@ public class WikiModule extends Module {
                     }
                 }
 
+                response.addHeader("Content-type", "text/html");
                 if(zipSupport) {
                     response.addHeader("Content-Encoding", "gzip");
+                    resourceModule.writeFile(response, new File(cacheFile.getPath() + ".gz"));
+                } else {
+                    resourceModule.writeFile(response, cacheFile);
                 }
-                resourceModule.writeFile(response, cacheFile);
             }
         } else if(params.containsKey("put") || files != null && files.size() > 0) {
             // TODO: Edit mode does not support yet
@@ -175,7 +178,11 @@ public class WikiModule extends Module {
         // <a ... href="File:example.jpg" ...>
         // that is actually no where! so we fix it by this regex
 
-        html = html.replaceAll("href=\"File:", "href=\"" + apiPath);
+        html = html.replaceAll("(?i)href=\"file:", "href=\"" + apiPath);
+
+        final String attributesToRemove = "width";
+
+        html = html.replaceAll("\\s+(?:" + attributesToRemove + ")\\s*=\\s*\"[^\"]*\"","");
 
         // another solution remove attr,
         // htmlFragment.replaceAll("\\s+(?:" + attributesToRemove + ")\\s*=\\s*\"[^\"]*\"","");
