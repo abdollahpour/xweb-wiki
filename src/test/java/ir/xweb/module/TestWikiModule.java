@@ -39,7 +39,28 @@ public class TestWikiModule {
     }
 
     @Test
-    public void testGet() throws IOException {
+    public void testGet2() throws IOException {
+        final HttpServletRequest request = mock(HttpServletRequest.class);
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        when(response.getOutputStream()).thenReturn(new ServletOutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                System.out.write(b);
+            }
+        });
+
+
+        HashMap<String, String> params = new HashMap<String, String>();
+        params.put("get", "sample2");
+
+        wikiModule.process(this.servletContext, request, response, new ModuleParam(params), null);
+
+        verify(response).addHeader("Content-type", "text/html");
+    }
+
+    @Test
+    public void testGet1() throws IOException {
         final HttpServletRequest request = mock(HttpServletRequest.class);
         final HttpServletResponse response = mock(HttpServletResponse.class);
 

@@ -14,16 +14,6 @@
 
 	<repositories>
 		<repository>
-			<id>info-bliki-repository</id>
-			<url>http://gwtwiki.googlecode.com/svn/maven-repository/</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-		<repository>
 			<id>xweb</id>
 			<url>https://raw.github.com/abdollahpour/xweb/master/releases</url>
 		</repository>
@@ -55,11 +45,6 @@
 			<groupId>ir.xweb</groupId>
 			<artifactId>xweb</artifactId>
 			<version>0.7.0-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>info.bliki.wiki</groupId>
-			<artifactId>bliki-core</artifactId>
-			<version>3.0.19</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>

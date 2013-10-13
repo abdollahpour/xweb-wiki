@@ -1,2 +1,13 @@
-#sample header
+This is test
+
+==Main header==
 [[File:example.jpg|caption|center]]
+
+===Sub header1===
+This is sample test
+
+===Sub header2===
+This is sample test
+
+===Sub header3===
+This is sample test

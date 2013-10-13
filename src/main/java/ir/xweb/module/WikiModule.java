@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class WikiModule extends Module {
 
@@ -183,8 +184,11 @@ public class WikiModule extends Module {
 
         // Fix toc
         // We don't need TITLE, because it's different in different language. We add title by CSS
-        html = html.replaceAll("<div\\s+(?=[^>]*\\bid\\s*=)(?![^>]*\\btoctitle\\s*=)[^>]*>(.*?)</div>", "");
-
+        final int startTocIndex = html.indexOf("<div id=\"toctitle\">");
+        if(startTocIndex > 0) {
+            final int endTocIndex = html.indexOf("</div>") + "</div>".length();
+            html = html.substring(0, startTocIndex) + html.substring(endTocIndex);
+        }
 
         Tools.writeTextFile(html, dst);
     }
