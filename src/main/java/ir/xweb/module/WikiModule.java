@@ -10,6 +10,7 @@ import info.bliki.wiki.model.WikiModel;
 import ir.xweb.server.Constants;
 import ir.xweb.util.Tools;
 import org.apache.commons.fileupload.FileItem;
+import org.markdown4j.Markdown4jProcessor;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -81,40 +82,24 @@ public class WikiModule extends Module {
             if(isImage(path)) {
                 resourceModule.writeFile(response, new File(wikiDir, path));
             } else {
-                boolean zipSupport = false;
-                final String acceptEncoding = request.getHeader("Accept-Encoding");
-                if(acceptEncoding != null && acceptEncoding.toLowerCase().indexOf("gzip") > -1) {
-                    zipSupport = true;
-                }
-
                 final File cacheFile = new File(cacheDir, path + ".html");
-                final File mediaWiki = new File(wikiDir, path + ".mediawiki");
+                final File markdown = new File(wikiDir, path + ".md");
+                final File mediawiki = new File(wikiDir, path + ".mediawiki");
 
-                File wikiFile = null;
-                if(mediaWiki.exists()) {
-                    wikiFile = mediaWiki;
-                } else {
-                    throw new ModuleException(HttpServletResponse.SC_NO_CONTENT, path + " not found");
-                }
-
-
-                if(!cacheFile.exists() || wikiFile.lastModified() > cacheFile.lastModified()) {
-                    if(mediaWiki != null) {
-                        mediaWikiConvert(context, wikiFile, cacheFile);
+                if(markdown.exists()) {
+                    if(!cacheFile.exists() || markdown.lastModified() > cacheFile.lastModified()) {
+                        markdownConvert(context, markdown, cacheFile);
+                        Tools.zipFile(cacheFile, new File(cacheFile.getPath() + ".gz"));
                     }
-                    // generate zip
-                    if(wikiFile != null) {
+                } else if(mediawiki.exists()) {
+                    if(!cacheFile.exists() || mediawiki.lastModified() > cacheFile.lastModified()) {
+                        mediawikiConvert(context, mediawiki, cacheFile);
                         Tools.zipFile(cacheFile, new File(cacheFile.getPath() + ".gz"));
                     }
                 }
 
                 response.addHeader("Content-type", "text/html");
-                if(zipSupport) {
-                    response.addHeader("Content-Encoding", "gzip");
-                    resourceModule.writeFile(response, new File(cacheFile.getPath() + ".gz"));
-                } else {
-                    resourceModule.writeFile(response, cacheFile);
-                }
+                resourceModule.writeFile(request, response, cacheFile);
             }
         } else if(params.containsKey("put") || files != null && files.size() > 0) {
             // TODO: Edit mode does not support yet
@@ -161,7 +146,13 @@ public class WikiModule extends Module {
         return false;
     }
 
-    private void mediaWikiConvert(final ServletContext context, final File src, final File dst) throws IOException {
+    private void markdownConvert(final ServletContext context, final File src, final File dst) throws IOException {
+        final String wiki = Tools.readTextFile(src);
+        final String html = new Markdown4jProcessor().process(wiki);
+        Tools.writeTextFile(html, dst);
+    }
+
+    private void mediawikiConvert(final ServletContext context, final File src, final File dst) throws IOException {
         final String wiki = Tools.readTextFile(src);
 
         // generate image address
@@ -189,6 +180,11 @@ public class WikiModule extends Module {
         // code:
         // String attributesToRemove = "id\\=\\\"3nav";
         // html = html.replaceAll("\\s+(?:" + attributesToRemove + ")[^\"]*\"","");
+
+        // Fix toc
+        // We don't need TITLE, because it's different in different language. We add title by CSS
+        html = html.replaceAll("<div\\s+(?=[^>]*\\bid\\s*=)(?![^>]*\\btoctitle\\s*=)[^>]*>(.*?)</div>", "");
+
 
         Tools.writeTextFile(html, dst);
     }
