@@ -20,22 +20,20 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
-import java.util.regex.Pattern;
 
 public class WikiModule extends Module {
 
     private final static String WIKI_DIR   = "dir.wiki";
 
-    private final static String WIKI_CHACHE_DIR   = "dir.cache";
+    private final static String WIKI_CACHE_DIR   = "dir.cache";
 
     private final static String FILE_NAME_STRIPPER_REGEX = "^[.\\\\/:*?\"<>|]?[\\\\/:*?\"<>|]*";
 
-    private final static List<String> VALID_IMAGE_EXT = Arrays.asList(".png", ".jpg", ".gif", ".svg");
+    private final static String IMAGE_REGEX = "^.+?(?i)(jpg|jpeg|git|png|svg)$";
 
     private final File wikiDir;
 
-    private final File cacheDir;
+    private File cacheDir;
 
     public WikiModule(
             final Manager manager,
@@ -49,7 +47,6 @@ public class WikiModule extends Module {
         }
 
         wikiDir = new File(wikiPath);
-        System.out.println(wikiDir.getAbsolutePath());
         if(!wikiDir.exists() && !wikiDir.mkdirs()) {
             throw new IllegalArgumentException("Can not create wiki dir: " + wikiDir);
         }
@@ -57,13 +54,9 @@ public class WikiModule extends Module {
             throw new IllegalArgumentException("Can not read wiki dir: " + wikiDir);
         }
 
-        String cachePath = properties.getString(WIKI_CHACHE_DIR, wikiPath);
-        cacheDir = new File(cachePath);
-        if(!cacheDir.exists() && !cacheDir.mkdirs()) {
+        cacheDir = properties.getFile(WIKI_CACHE_DIR, (File)null);
+        if(cacheDir != null && !cacheDir.exists() && !cacheDir.mkdirs()) {
             throw new IllegalArgumentException("Can not create cache dir: " + cacheDir);
-        }
-        if(!cacheDir.canWrite()) {
-            throw new IllegalArgumentException("Can not read cache dir: " + cacheDir);
         }
     }
 
@@ -77,10 +70,14 @@ public class WikiModule extends Module {
 
         final ResourceModule resourceModule = getManager().getModuleOrThrow(ResourceModule.class);
 
+        if(cacheDir == null) {
+            cacheDir = resourceModule.initTempDir();
+        }
+
         if(params.containsKey("get") || params.containsKey("html") /* deprecated */) {
             final String path = params.getString("get", params.getString("html", null)).replaceAll("[\\s]", "_");
 
-            if(isImage(path)) {
+            if(path.matches(IMAGE_REGEX)) { // Is image?
                 resourceModule.writeFile(response, new File(wikiDir, path));
             } else {
                 final File cacheFile = new File(cacheDir, path + ".html");
@@ -136,15 +133,6 @@ public class WikiModule extends Module {
             throw new IllegalArgumentException("Illegal request!");
         }
 
-    }
-
-    private boolean isImage(final String path) {
-        for(String ext:VALID_IMAGE_EXT) {
-            if(path.endsWith(ext)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void markdownConvert(final ServletContext context, final File src, final File dst) throws IOException {
