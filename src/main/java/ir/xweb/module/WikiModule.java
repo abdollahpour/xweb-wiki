@@ -18,7 +18,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.HashMap;
 
 public class WikiModule extends Module {
@@ -38,7 +37,7 @@ public class WikiModule extends Module {
     public WikiModule(
             final Manager manager,
             final ModuleInfo info,
-            final ModuleParam properties) {
+            final ModuleParam properties) throws ModuleException {
         super(manager, info, properties);
 
         String wikiPath = properties.getString(WIKI_DIR, null);
@@ -86,7 +85,7 @@ public class WikiModule extends Module {
 
                 if(markdown.exists()) {
                     if(!cacheFile.exists() || markdown.lastModified() > cacheFile.lastModified()) {
-                        markdownConvert(context, markdown, cacheFile);
+                        markdownConvert(markdown, cacheFile);
                         Tools.zipFile(cacheFile, new File(cacheFile.getPath() + ".gz"));
                     }
                 } else if(mediawiki.exists()) {
@@ -135,21 +134,31 @@ public class WikiModule extends Module {
 
     }
 
-    private void markdownConvert(final ServletContext context, final File src, final File dst) throws IOException {
+    public static void markdownConvert(final File src, final File dst) throws IOException {
         final String wiki = Tools.readTextFile(src);
         final String html = new Markdown4jProcessor().process(wiki);
         Tools.writeTextFile(html, dst);
     }
 
     private void mediawikiConvert(final ServletContext context, final File src, final File dst) throws IOException {
-        final String wiki = Tools.readTextFile(src);
-
         // generate image address
         final String apiPath = (context.getContextPath() != null ? context.getContextPath() : "") +
                 Constants.MODULE_URI_PERFIX + "?" +
                 Constants.MODULE_NAME_PARAMETER + "=" + getInfo().getName() + "&get=";
 
-        final WikiModel model = new WikiModel(apiPath + "${image}", "${title}");
+        mediawikiConvert(src, dst, apiPath);
+    }
+
+    public static void mediawikiConvert(final File src, final File dst) throws IOException {
+        mediawikiConvert(src, dst, "");
+    }
+
+    public static void mediawikiConvert(final File src, final File dst, final String wikiDir) throws IOException {
+        final String wiki = Tools.readTextFile(src);
+
+
+
+        final WikiModel model = new WikiModel(wikiDir + "${image}", "${title}");
 
         String html = model.render(wiki, false);
 
@@ -158,7 +167,7 @@ public class WikiModule extends Module {
         // <a ... href="File:example.jpg" ...>
         // that is actually no where! so we fix it by this regex
 
-        html = html.replaceAll("(?i)href=\"file:", "href=\"" + apiPath);
+        html = html.replaceAll("(?i)href=\"file:", "href=\"" + wikiDir);
 
         final String attributesToRemove = "width";
 
