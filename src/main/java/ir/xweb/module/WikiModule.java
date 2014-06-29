@@ -10,7 +10,7 @@ import info.bliki.wiki.model.WikiModel;
 import ir.xweb.server.Constants;
 import ir.xweb.util.Tools;
 import org.apache.commons.fileupload.FileItem;
-import org.markdown4j.Markdown4jProcessor;
+import org.pegdown.PegDownProcessor;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -18,7 +18,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.HashMap;
+import java.util.Map;
 
 public class WikiModule extends Module {
 
@@ -33,6 +33,8 @@ public class WikiModule extends Module {
     private final File wikiDir;
 
     private File cacheDir;
+
+    private final PegDownProcessor pegDownProcessor;
 
     public WikiModule(
             final Manager manager,
@@ -57,6 +59,8 @@ public class WikiModule extends Module {
         if(cacheDir != null && !cacheDir.exists() && !cacheDir.mkdirs()) {
             throw new IllegalArgumentException("Can not create cache dir: " + cacheDir);
         }
+
+        pegDownProcessor = new PegDownProcessor();
     }
 
     @Override
@@ -65,7 +69,7 @@ public class WikiModule extends Module {
             final HttpServletRequest request,
             final HttpServletResponse response,
             final ModuleParam params,
-            final HashMap<String, FileItem> files) throws IOException {
+            final Map<String, FileItem> files) throws IOException {
 
         final ResourceModule resourceModule = getManager().getModuleOrThrow(ResourceModule.class);
 
@@ -85,7 +89,7 @@ public class WikiModule extends Module {
 
                 if(markdown.exists()) {
                     if(!cacheFile.exists() || markdown.lastModified() > cacheFile.lastModified()) {
-                        markdownConvert(markdown, cacheFile);
+                        markdownToHtml(markdown, cacheFile);
                         Tools.zipFile(cacheFile, new File(cacheFile.getPath() + ".gz"));
                     }
                 } else if(mediawiki.exists()) {
@@ -134,9 +138,20 @@ public class WikiModule extends Module {
 
     }
 
-    public static void markdownConvert(final File src, final File dst) throws IOException {
+    /**
+     * Convert markdown string to html string.
+     * @param markdown Markdown String
+     * @return HTML String
+     * @throws IOException
+     */
+    public synchronized String markdownToHtml(final String markdown) throws IOException {
+        // PegDown is not thread-safe
+        return pegDownProcessor.markdownToHtml(markdown);
+    }
+
+    public void markdownToHtml(final File src, final File dst) throws IOException {
         final String wiki = Tools.readTextFile(src);
-        final String html = new Markdown4jProcessor().process(wiki);
+        final String html = markdownToHtml(wiki);
         Tools.writeTextFile(html, dst);
     }
 
@@ -149,11 +164,11 @@ public class WikiModule extends Module {
         mediawikiConvert(src, dst, apiPath);
     }
 
-    public static void mediawikiConvert(final File src, final File dst) throws IOException {
+    public void mediawikiConvert(final File src, final File dst) throws IOException {
         mediawikiConvert(src, dst, "");
     }
 
-    public static void mediawikiConvert(final File src, final File dst, final String wikiDir) throws IOException {
+    public void mediawikiConvert(final File src, final File dst, final String wikiDir) throws IOException {
         final String wiki = Tools.readTextFile(src);
 
 

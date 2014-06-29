@@ -51,7 +51,7 @@ public class TestWikiModule {
         });
 
 
-        HashMap<String, String> params = new HashMap<String, String>();
+        HashMap<String, Object> params = new HashMap<String, Object>();
         params.put("get", "sample2");
 
         wikiModule.process(this.servletContext, request, response, new ModuleParam(params), null);
@@ -72,7 +72,7 @@ public class TestWikiModule {
         });
 
 
-        HashMap<String, String> params = new HashMap<String, String>();
+        HashMap<String, Object> params = new HashMap<String, Object>();
         params.put("get", "sample");
 
         wikiModule.process(this.servletContext, request, response, new ModuleParam(params), null);
@@ -93,7 +93,7 @@ public class TestWikiModule {
             }
         });
 
-        HashMap<String, String> params = new HashMap<String, String>();
+        HashMap<String, Object> params = new HashMap<String, Object>();
         params.put("get", "sample");
 
         wikiModule.process(this.servletContext, request, response, new ModuleParam(params), null);
@@ -112,7 +112,7 @@ public class TestWikiModule {
             }
         });
 
-        HashMap<String, String> params = new HashMap<String, String>();
+        HashMap<String, Object> params = new HashMap<String, Object>();
         params.put("get", "sample");
 
         wikiModule.process(this.servletContext, request, response, new ModuleParam(params), null);
