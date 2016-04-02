@@ -1,3 +1,5 @@
+This project is deprecated and will not support anymore.
+
 # XWeb wiki
 XWeb wiki module. It support mediawiki format now.
 
